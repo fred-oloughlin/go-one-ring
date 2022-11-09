@@ -3,22 +3,29 @@ package main
 import (
 	"fmt"
 	"log"
-	ring "onering/oneringclient"
+	"onering/ring"
+	"os"
 )
 
 func main() {
-	endpoint := ring.BuildURL("book")
-	BookResponse, err := ring.GetBookResponse(endpoint)
+	var exitCode int
+	defer func() {
+		os.Exit(exitCode)
+	}()
+
+	BookResponse, err := ring.GetBookResponse()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		exitCode = 1
+		return
 	}
 
 	for _, book := range BookResponse.Books {
-
-		endpoint := ring.BuildURL("book", book.Id, "chapter")
-		ChapterResponse, err := ring.GetChapterResponse(endpoint)
+		ChapterResponse, err := ring.GetChapterResponse(book.Id)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			exitCode = 1
+			return
 		}
 
 		fmt.Println()
@@ -28,5 +35,4 @@ func main() {
 			fmt.Println(prefix, chapter.ChapterName)
 		}
 	}
-
 }

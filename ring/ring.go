@@ -1,9 +1,10 @@
-package oneringclient
+package ring
 
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -55,7 +56,7 @@ func getResponse(endpoint string) ([]byte, error) {
 	}
 
 	var body []byte
-	body, err = ioutil.ReadAll(resp.Body)
+	body, err = io.ReadAll(resp.Body)
 	if err != nil {
 		log.Println("ERROR | Unable to parse response from: ", endpoint)
 		return nil, err
@@ -64,50 +65,65 @@ func getResponse(endpoint string) ([]byte, error) {
 	return body, nil
 }
 
-func GetBookResponse(endpoint string) (BookResponse, error) {
+func GetBookResponse() (BookResponse, error) {
+	endpoint, err := BuildURL("book")
+	if err != nil {
+		return BookResponse{}, err
+	}
+	
 	body, err := getResponse(endpoint)
 	if err != nil {
 		return BookResponse{}, err
 	}
 
-	var Response BookResponse
-	json.Unmarshal(body, &Response)
-	if len(Response.Books) == 0 {
+	var response BookResponse
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		return BookResponse{}, err
+	}
+	if len(response.Books) == 0 {
 		log.Println("ERROR | ")
 		return BookResponse{}, errors.New("Could not parse content from: " + endpoint)
 	}
 
-	return Response, nil
+	return response, nil
 }
 
-func GetChapterResponse(endpoint string) (ChapterResponse, error) {
+func GetChapterResponse(book_id string) (ChapterResponse, error) {
+	endpoint, err := BuildURL("book", book_id, "chapter")
+	if err != nil {
+		return ChapterResponse{}, err
+	}
+	
 	body, err := getResponse(endpoint)
 	if err != nil {
 		return ChapterResponse{}, err
 	}
 
-	var Response ChapterResponse
-	json.Unmarshal(body, &Response)
-	if len(Response.Chapters) == 0 {
+	var response ChapterResponse
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		return ChapterResponse{}, err
+	}
+	if len(response.Chapters) == 0 {
 		log.Println("ERROR | ")
 		return ChapterResponse{}, errors.New("Could not parse content from: " + endpoint)
 	}
 
-	return Response, nil
+	return response, nil
 }
 
-func BuildURL(path_items ...string) string {
+func BuildURL(path_items ...string) (string, error) {
 	var base string = "https://the-one-api.dev/v2"
-	endpoint, _ := url.JoinPath(base, path_items...)
+	endpoint, err := url.JoinPath(base, path_items...)
 
-	return endpoint
+	return endpoint, err
 }
 
 func BuildPrefix(index int) string {
-	chnoCharCount := len(strconv.Itoa(index))
-	spacesNeeded := 4 - chnoCharCount
+	chapterNumberCharCount := len(strconv.Itoa(index))
+	spacesNeeded := 4 - chapterNumberCharCount
 	prefixSpaces := strings.Repeat(" ", spacesNeeded)
-	prefix := strconv.Itoa(index) + prefixSpaces + "-" + " "
-
-	return prefix
+	
+	return fmt.Sprintf("%d%s- ", index, prefixSpaces)
 }
